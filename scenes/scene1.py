@@ -8,8 +8,8 @@ default_params = {
 
 def teacher_view(params, bids):
     st.subheader("Single-price Clearing Market Result")
-    if not bids:
-        st.info("Waiting for students to submit bids...")
+    if not bids or not all('price' in b for b in bids):
+        st.info("Waiting for all students to submit bids...")
         return
     df = pd.DataFrame(bids)
     df = df.sort_values(by='price')
@@ -38,7 +38,7 @@ def teacher_view(params, bids):
 
 def student_view(params, bids, user_info):
     st.subheader("Market Status")
-    if not bids:
+    if not bids or not all('price' in b for b in bids):
         st.info("Waiting for all students to submit bids...")
         return
     df = pd.DataFrame(bids)
