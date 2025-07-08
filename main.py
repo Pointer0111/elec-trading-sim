@@ -78,15 +78,21 @@ if st.session_state['role'] == 'teacher':
 elif st.session_state['role'] == 'student':
     st.header("Join Classroom Session")
     if not st.session_state['session_code']:
-        session_code = st.text_input("Enter Session Code to Join")
-        if st.button("Join"):
-            user_info = join_session(session_code, st.session_state['username'])
-            if user_info:
-                st.session_state['session_code'] = session_code
-                st.success(f"Joined session {session_code}")
-            else:
-                st.error("Invalid session code or already joined.")
-                st.stop()
+        all_sessions = get_all_sessions()
+        if not all_sessions:
+            st.info("No available sessions. Please wait for the teacher to create one.")
+        else:
+            st.write("## Available Sessions")
+            df_sessions = pd.DataFrame(all_sessions)
+            selected = st.radio("Select a session to join:", df_sessions['code'].tolist(), format_func=lambda x: f"{x} (Scenario {df_sessions[df_sessions['code']==x]['scene_id'].values[0]})")
+            if st.button("Join Selected Session"):
+                user_info = join_session(selected, st.session_state['username'])
+                if user_info is not None:
+                    st.session_state['session_code'] = selected
+                    st.success(f"Joined session {selected}")
+                    st.rerun()
+                else:
+                    st.warning("You have already joined this session.")
     if st.session_state['session_code']:
         user_info = get_user_info(st.session_state['session_code'], st.session_state['username'])
         st.write(f"### Your Role: {user_info}")
