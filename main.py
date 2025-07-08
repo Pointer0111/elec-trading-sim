@@ -147,77 +147,41 @@ def scenarios_list_page():
                 st.write(f"**Status:** :{'green' if scenario['status']=='active' else 'gray'}[{scenario['status'].capitalize()}]")
                 st.write(f"**Participants:** {scenario.get('participants', 0)}")
                 st.write(f"**Created:** {scenario['created_at']}")
-                # 自定义按钮样式
+                # 注入按钮样式，保证等宽等高
                 st.markdown('''
                 <style>
-                .custom-btn-row {display: flex; gap: 0.5em; margin-bottom: 1em;}
-                .custom-btn {
-                    flex: 1;
-                    height: 2.5em;
-                    border-radius: 8px;
-                    border: 1.5px solid #d3d3d3;
-                    background: #fff;
-                    color: #333;
-                    font-weight: 600;
-                    font-size: 1em;
-                    cursor: pointer;
-                    transition: background 0.2s, color 0.2s, border 0.2s;
+                .stButton > button {
+                    width: 100% !important;
+                    height: 2.5em !important;
+                    border-radius: 8px !important;
+                    font-weight: 600 !important;
+                    font-size: 1em !important;
+                    margin-bottom: 0.2em !important;
                 }
-                .custom-btn:hover { background: #f8f8f8; border-color: #aaa; }
-                .custom-btn-danger { color: #fff; background: #e74c3c; border-color: #e74c3c; }
-                .custom-btn-danger:hover { background: #c0392b; border-color: #c0392b; }
-                .custom-btn-primary { color: #e74c3c; border-color: #e74c3c; }
-                .custom-btn-primary:hover { background: #fdecea; }
                 </style>
                 ''', unsafe_allow_html=True)
-                # 按钮逻辑
-                btn_key = f"btn_{scenario['id']}"
-                if 'btn_action' not in st.session_state:
-                    st.session_state['btn_action'] = None
-                st.markdown(f'''
-                <div class="custom-btn-row">
-                    <form action="" method="post">
-                        <button class="custom-btn custom-btn-primary" name="action" value="join_{scenario['id']}" type="submit">Join Scenario</button>
-                    </form>
-                    <form action="" method="post">
-                        <button class="custom-btn" name="action" value="view_{scenario['id']}" type="submit">View Details</button>
-                    </form>
-                    {f'''<form action="" method="post"><button class="custom-btn custom-btn-danger" name="action" value="delete_{scenario['id']}" type="submit">Delete</button></form>''' if st.session_state['role']=='teacher' else ''}
-                </div>
-                ''', unsafe_allow_html=True)
-                # 处理按钮点击
-                import streamlit as st2
-                import sys
-                if st.session_state.get('action', None):
-                    action = st.session_state['action']
-                    if action == f'join_{scenario["id"]}':
+                if st.session_state['role'] == 'teacher':
+                    c1, c2, c3 = st.columns(3)
+                else:
+                    c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("Join Scenario", key=f"join_{scenario['id']}"):
                         st.session_state['page'] = 'bidding'
                         st.session_state['selected_scenario'] = scenario['id']
                         join_scenario(scenario['id'])
-                        st.session_state['action'] = None
-                        st.experimental_rerun()
-                    elif action == f'view_{scenario["id"]}':
+                        st.rerun()
+                with c2:
+                    if st.button("View Details", key=f"view_{scenario['id']}"):
                         st.session_state['page'] = 'detail'
                         st.session_state['selected_scenario'] = scenario['id']
-                        st.session_state['action'] = None
-                        st.experimental_rerun()
-                    elif action == f'delete_{scenario["id"]}' and st.session_state['role']=='teacher':
-                        scenarios = [s for s in scenarios if s['id'] != scenario['id']]
-                        save_json(SCENARIOS_FILE, scenarios)
-                        st.success("Scenario deleted!")
-                        st.session_state['action'] = None
-                        st.experimental_rerun()
-                # 捕获表单提交
-                if hasattr(st, 'context') and hasattr(st.context, 'headers'):
-                    if st.context.headers.get('content-type', '').startswith('application/x-www-form-urlencoded'):
-                        import urllib.parse
-                        import os
-                        if 'CONTENT_LENGTH' in os.environ:
-                            length = int(os.environ['CONTENT_LENGTH'])
-                            post_data = sys.stdin.read(length)
-                            post = urllib.parse.parse_qs(post_data)
-                            if 'action' in post:
-                                st.session_state['action'] = post['action'][0]
+                        st.rerun()
+                if st.session_state['role'] == 'teacher':
+                    with c3:
+                        if st.button("Delete", key=f"delete_{scenario['id']}"):
+                            scenarios = [s for s in scenarios if s['id'] != scenario['id']]
+                            save_json(SCENARIOS_FILE, scenarios)
+                            st.success("Scenario deleted!")
+                            st.rerun()
 
 def scenario_detail_page():
     sid = st.session_state.get('selected_scenario')
