@@ -72,6 +72,15 @@ def login_page():
             if not student_name.strip():
                 st.error("Please enter your name.")
             else:
+                # 自动添加学生到users.json
+                users = load_json(USERS_FILE)
+                if student_name.strip() not in users:
+                    users[student_name.strip()] = {
+                        'password': '',
+                        'role': 'student',
+                        'full_name': student_name.strip()
+                    }
+                    save_json(USERS_FILE, users)
                 st.session_state['logged_in'] = True
                 st.session_state['username'] = student_name.strip()
                 st.session_state['role'] = 'student'
@@ -80,7 +89,7 @@ def login_page():
     with tab1:
         password = st.text_input("Teacher Password", type="password", key="login_pw")
         if st.button("Login as Teacher"):
-            if password == 'teachpass':
+            if password == '123456':
                 st.session_state['logged_in'] = True
                 st.session_state['username'] = 'teacher1'
                 st.session_state['role'] = 'teacher'
@@ -278,11 +287,18 @@ def join_scenario(sid):
     participants = load_json(PARTICIPANTS_FILE)
     user = st.session_state['username']
     users = load_json(USERS_FILE)
+    # 兼容学生未注册的情况
     if user not in [p['username'] for p in participants.get(str(sid), [])]:
+        if user in users:
+            full_name = users[user].get('full_name', user)
+            role = users[user].get('role', 'student')
+        else:
+            full_name = user
+            role = 'student'
         participants.setdefault(str(sid), []).append({
             'username': user,
-            'full_name': users[user]['full_name'],
-            'role': users[user]['role'],
+            'full_name': full_name,
+            'role': role,
             'join_time': datetime.now().strftime('%Y-%m-%d')
         })
         save_json(PARTICIPANTS_FILE, participants)
