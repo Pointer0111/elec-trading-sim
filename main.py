@@ -20,6 +20,16 @@ PARTICIPANTS_FILE = ensure_json_file('participants.json', {})
 BIDS_FILE = ensure_json_file('bids.json', {})
 USERS_FILE = ensure_json_file('users.json', {})
 
+def load_json(filename):
+    with open(filename, 'r') as f:
+        return json.load(f)
+
+def save_json(filename, data):
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=2)
+
+# ------------------ 数据文件和工具 ------------------
+
 # 初始化默认用户
 DEFAULT_USERS = {
     'teacher1': {'password': 'teachpass', 'role': 'teacher', 'full_name': 'Teacher One'},
@@ -31,14 +41,6 @@ def ensure_default_users():
     if not users:
         save_json(USERS_FILE, DEFAULT_USERS)
 ensure_default_users()
-
-def load_json(filename):
-    with open(filename, 'r') as f:
-        return json.load(f)
-
-def save_json(filename, data):
-    with open(filename, 'w') as f:
-        json.dump(data, f, indent=2)
 
 # ------------------ 用户管理 ------------------
 def register_user(username, password, role):
