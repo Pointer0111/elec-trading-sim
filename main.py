@@ -1,0 +1,93 @@
+import streamlit as st
+import pandas as pd
+from scenes import get_scene_module
+from auth import login, get_user_role, logout
+from db import (
+    create_session, join_session, get_session_params, 
+    submit_bid, get_bids, get_user_info, get_all_sessions
+)
+
+st.set_page_config(page_title="Electricity Market Simulation", layout="wide")
+
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+if 'role' not in st.session_state:
+    st.session_state['role'] = None
+if 'username' not in st.session_state:
+    st.session_state['username'] = None
+if 'session_code' not in st.session_state:
+    st.session_state['session_code'] = None
+
+# Login page
+if not st.session_state['logged_in']:
+    login()
+    st.stop()
+
+# Top bar
+st.sidebar.title("Electricity Market Simulation Platform")
+st.sidebar.write(f"Logged in as: {st.session_state['username']} ({st.session_state['role']})")
+if st.sidebar.button("Logout"):
+    logout()
+    st.experimental_rerun()
+
+# Teacher/Admin view
+if st.session_state['role'] == 'teacher':
+    st.header("Classroom Session Management")
+    all_sessions = get_all_sessions()
+    st.write("## Existing Sessions")
+    st.dataframe(pd.DataFrame(all_sessions))
+    st.write("## Create New Session")
+    from scenes import SCENE_TITLES, get_default_params
+    scene_id = st.selectbox("Select Scenario", list(SCENE_TITLES.keys()), format_func=lambda x: f"{x}: {SCENE_TITLES[x]}")
+    params = get_default_params(scene_id)
+    with st.form("session_params_form"):
+        param_inputs = {}
+        for k, v in params.items():
+            param_inputs[k] = st.number_input(k, value=v)
+        submitted = st.form_submit_button("Create Session")
+        if submitted:
+            session_code = create_session(scene_id, param_inputs)
+            st.session_state['session_code'] = session_code
+            st.success(f"Session created! Session code: {session_code}")
+    # Show session management and results if session selected
+    if st.session_state['session_code']:
+        st.write(f"### Session Code: {st.session_state['session_code']}")
+        session_params = get_session_params(st.session_state['session_code'])
+        st.write("#### Session Parameters", session_params)
+        bids = get_bids(st.session_state['session_code'])
+        st.write("#### Current Bids", pd.DataFrame(bids))
+        # Run scenario logic and show results
+        scene_mod = get_scene_module(session_params['scene_id'])
+        scene_mod.teacher_view(session_params, bids)
+
+# Student view
+elif st.session_state['role'] == 'student':
+    st.header("Join Classroom Session")
+    if not st.session_state['session_code']:
+        session_code = st.text_input("Enter Session Code to Join")
+        if st.button("Join"):
+            user_info = join_session(session_code, st.session_state['username'])
+            if user_info:
+                st.session_state['session_code'] = session_code
+                st.success(f"Joined session {session_code}")
+            else:
+                st.error("Invalid session code or already joined.")
+                st.stop()
+    if st.session_state['session_code']:
+        user_info = get_user_info(st.session_state['session_code'], st.session_state['username'])
+        st.write(f"### Your Role: {user_info}")
+        # Show bid submission form
+        if not user_info.get('bid_submitted', False):
+            min_price = user_info['MC']
+            price = st.number_input("Enter your offer price (must be >= MC)", min_value=min_price)
+            if st.button("Submit Bid"):
+                submit_bid(st.session_state['session_code'], st.session_state['username'], price)
+                st.success("Bid submitted! Waiting for results...")
+                st.experimental_rerun()
+        else:
+            st.info("You have submitted your bid. Please wait for the teacher to publish results.")
+        # Show current market status
+        session_params = get_session_params(st.session_state['session_code'])
+        bids = get_bids(st.session_state['session_code'])
+        scene_mod = get_scene_module(session_params['scene_id'])
+        scene_mod.student_view(session_params, bids, user_info) 
