@@ -13,7 +13,7 @@ except ImportError:
 from auth import login, get_user_role, logout
 from db import (
     create_session, join_session, get_session_params, 
-    submit_bid, get_bids, get_user_info, get_all_sessions
+    submit_bid, get_bids, get_user_info, get_all_sessions, delete_session
 )
 
 st.set_page_config(page_title="Electricity Market Simulation", layout="wide")
@@ -42,9 +42,8 @@ if st.sidebar.button("Logout"):
 # Teacher/Admin view
 if st.session_state['role'] == 'teacher':
     st.header("Classroom Session Management")
-    all_sessions = get_all_sessions()
-    st.write("## Existing Sessions")
-    st.dataframe(pd.DataFrame(all_sessions))
+    
+    # Create New Session
     st.write("## Create New Session")
     if SCENES_AVAILABLE:
         scene_id = st.selectbox("Select Scenario", list(SCENE_TITLES.keys()), format_func=lambda x: f"{x}: {SCENE_TITLES[x]}")
@@ -56,23 +55,65 @@ if st.session_state['role'] == 'teacher':
             submitted = st.form_submit_button("Create Session")
             if submitted:
                 session_code = create_session(scene_id, param_inputs)
-                st.session_state['session_code'] = session_code
                 st.success(f"Session created! Session code: {session_code}")
-        # Show session management and results if session selected
-        if st.session_state['session_code']:
-            st.write(f"### Session Code: {st.session_state['session_code']}")
-            session_params = get_session_params(st.session_state['session_code'])
-            st.write("#### Session Parameters", session_params)
-            bids = get_bids(st.session_state['session_code'])
-            st.write("#### Current Bids", pd.DataFrame(bids))
-            # Run scenario logic and show results
-            scene_mod = get_scene_module(session_params['scene_id'])
-            if scene_mod:
-                scene_mod.teacher_view(session_params, bids)
-            else:
-                st.error("Scenario module not available")
+                st.rerun()  # Refresh to show new session
     else:
         st.error("Scenes module not available")
+    
+    # Existing Sessions Management
+    st.write("## Existing Sessions")
+    all_sessions = get_all_sessions()
+    if not all_sessions:
+        st.info("No sessions created yet.")
+    else:
+        # Display sessions in a more interactive way
+        for session in all_sessions:
+            with st.expander(f"Session {session['code']} - Scenario {session['scene_id']}"):
+                col1, col2, col3 = st.columns([3, 1, 1])
+                
+                with col1:
+                    st.write(f"**Session Code:** {session['code']}")
+                    st.write(f"**Scenario:** {SCENE_TITLES.get(session['scene_id'], f'Scenario {session['scene_id']}')}")
+                    
+                    # View details button
+                    if st.button(f"View Details", key=f"view_{session['code']}"):
+                        st.session_state['session_code'] = session['code']
+                        st.rerun()
+                
+                with col2:
+                    # Delete session button
+                    if st.button(f"Delete", key=f"delete_{session['code']}"):
+                        delete_session(session['code'])
+                        st.success(f"Session {session['code']} deleted!")
+                        st.rerun()
+                
+                with col3:
+                    # Join session button (for testing)
+                    if st.button(f"Join", key=f"join_{session['code']}"):
+                        st.session_state['session_code'] = session['code']
+                        st.rerun()
+    
+    # Show session details if selected
+    if st.session_state['session_code']:
+        st.write(f"### Session Details: {st.session_state['session_code']}")
+        session_params = get_session_params(st.session_state['session_code'])
+        st.write("#### Session Parameters")
+        st.json(session_params)
+        
+        bids = get_bids(st.session_state['session_code'])
+        st.write("#### Current Bids")
+        if bids:
+            df_bids = pd.DataFrame(bids)
+            st.dataframe(df_bids)
+        else:
+            st.info("No bids submitted yet.")
+        
+        # Run scenario logic and show results
+        scene_mod = get_scene_module(session_params['scene_id'])
+        if scene_mod:
+            scene_mod.teacher_view(session_params, bids)
+        else:
+            st.error("Scenario module not available")
 
 # Student view
 elif st.session_state['role'] == 'student':

@@ -74,6 +74,20 @@ def get_user_info(session_code, username):
     db = load_db()
     return db['sessions'][session_code]['bids'].get(username, {})
 
+def delete_session(session_code):
+    """Delete a session and all its bids"""
+    db = load_db()
+    if session_code in db['sessions']:
+        # Remove session
+        del db['sessions'][session_code]
+        # Remove user associations
+        users_to_remove = [user for user, session in db['user_sessions'].items() if session == session_code]
+        for user in users_to_remove:
+            del db['user_sessions'][user]
+        save_db(db)
+        return True
+    return False
+
 def clear_old_sessions():
     """Clear sessions older than 24 hours"""
     db = load_db()
