@@ -24,7 +24,7 @@ def login():
                 st.session_state['role'] = role
                 st.session_state['username'] = username
                 st.success("Login successful!")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Incorrect password or role.")
         else:

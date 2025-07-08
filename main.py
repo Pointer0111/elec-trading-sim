@@ -28,7 +28,7 @@ st.sidebar.title("Electricity Market Simulation Platform")
 st.sidebar.write(f"Logged in as: {st.session_state['username']} ({st.session_state['role']})")
 if st.sidebar.button("Logout"):
     logout()
-    st.experimental_rerun()
+    st.rerun()
 
 # Teacher/Admin view
 if st.session_state['role'] == 'teacher':
@@ -83,7 +83,7 @@ elif st.session_state['role'] == 'student':
             if st.button("Submit Bid"):
                 submit_bid(st.session_state['session_code'], st.session_state['username'], price)
                 st.success("Bid submitted! Waiting for results...")
-                st.experimental_rerun()
+                st.rerun()
         else:
             st.info("You have submitted your bid. Please wait for the teacher to publish results.")
         # Show current market status
