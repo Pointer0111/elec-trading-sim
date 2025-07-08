@@ -208,16 +208,16 @@ def scenarios_list_page():
                         st.session_state['action'] = None
                         st.experimental_rerun()
                 # 捕获表单提交
-                import streamlit.web.server.websocket_headers as ws
-                if ws._get_websocket_headers().get('content-type', '').startswith('application/x-www-form-urlencoded'):
-                    import urllib.parse
-                    import os
-                    if 'CONTENT_LENGTH' in os.environ:
-                        length = int(os.environ['CONTENT_LENGTH'])
-                        post_data = sys.stdin.read(length)
-                        post = urllib.parse.parse_qs(post_data)
-                        if 'action' in post:
-                            st.session_state['action'] = post['action'][0]
+                if hasattr(st, 'context') and hasattr(st.context, 'headers'):
+                    if st.context.headers.get('content-type', '').startswith('application/x-www-form-urlencoded'):
+                        import urllib.parse
+                        import os
+                        if 'CONTENT_LENGTH' in os.environ:
+                            length = int(os.environ['CONTENT_LENGTH'])
+                            post_data = sys.stdin.read(length)
+                            post = urllib.parse.parse_qs(post_data)
+                            if 'action' in post:
+                                st.session_state['action'] = post['action'][0]
 
 def scenario_detail_page():
     sid = st.session_state.get('selected_scenario')
