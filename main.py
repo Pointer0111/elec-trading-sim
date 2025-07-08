@@ -65,20 +65,7 @@ def verify_user(username, password):
 # ------------------ 页面函数 ------------------
 def login_page():
     st.title("Login")
-    tab1, tab2 = st.tabs(["Teacher Login", "Student Enter"])
-    with tab1:
-        username = st.text_input("Teacher Username", key="login_user")
-        password = st.text_input("Password", type="password", key="login_pw")
-        if st.button("Login as Teacher"):
-            # 只允许唯一教师账号
-            if username == 'teacher1' and password == 'teachpass':
-                st.session_state['logged_in'] = True
-                st.session_state['username'] = username
-                st.session_state['role'] = 'teacher'
-                st.success("Login successful!")
-                st.rerun()
-            else:
-                st.error("Invalid teacher username or password.")
+    tab2, tab1 = st.tabs(["Student Enter", "Teacher Login"])
     with tab2:
         student_name = st.text_input("Your Name", key="student_name")
         if st.button("Enter as Student"):
@@ -90,6 +77,17 @@ def login_page():
                 st.session_state['role'] = 'student'
                 st.success(f"Welcome, {student_name.strip()}!")
                 st.rerun()
+    with tab1:
+        password = st.text_input("Teacher Password", type="password", key="login_pw")
+        if st.button("Login as Teacher"):
+            if password == 'teachpass':
+                st.session_state['logged_in'] = True
+                st.session_state['username'] = 'teacher1'
+                st.session_state['role'] = 'teacher'
+                st.success("Login successful!")
+                st.rerun()
+            else:
+                st.error("Invalid teacher password.")
 
 def get_market_types():
     types = ["Single-price Clearing Market", "Pay-as-Bid", "Transmission Constraints", "CMSC", "Locational Pricing", "Fixed Costs", "Cost Recovery Guarantees", "Multi-Interval Optimization", "Planning Risk", "Day-Ahead Market + Two-Settlement"]
