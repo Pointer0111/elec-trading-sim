@@ -107,7 +107,7 @@ def get_market_types():
             for line in f:
                 m = re.match(r"### \*\*场景 \d+：(.+?)（(.+?)）\*\*", line)
                 if m:
-                    types.append(f"{m.group(1)} ({m.group(2)})")
+                    types.append(m.group(2))  # 只保留英文
     except Exception as e:
         types = ["Single-price Clearing Market", "Pay-as-Bid", "Transmission Constraints", "CMSC", "Locational Pricing", "Fixed Costs", "Cost Recovery Guarantees", "Multi-Interval Optimization", "Planning Risk", "Day-Ahead Market + Two-Settlement"]
     return types
@@ -152,22 +152,35 @@ def scenarios_list_page():
                 st.write(f"**Status:** :{'green' if scenario['status']=='active' else 'gray'}[{scenario['status'].capitalize()}]")
                 st.write(f"**Participants:** {scenario.get('participants', 0)}")
                 st.write(f"**Created:** {scenario['created_at']}")
-                c1, c2, c3 = st.columns(3)
-                if scenario['status'] == 'active':
-                    if c1.button("Join Scenario", key=f"join_{scenario['id']}"):
-                        st.session_state['page'] = 'bidding'
+                # 加载自定义按钮样式
+                st.markdown('''
+                <style>
+                .stButton > button { width: 100% !important; }
+                </style>
+                ''', unsafe_allow_html=True)
+                if st.session_state['role'] == 'teacher':
+                    c1, c2, c3 = st.columns(3)
+                else:
+                    c1, c2 = st.columns(2)
+                with c1:
+                    if scenario['status'] == 'active':
+                        if st.button("Join Scenario", key=f"join_{scenario['id']}"):
+                            st.session_state['page'] = 'bidding'
+                            st.session_state['selected_scenario'] = scenario['id']
+                            join_scenario(scenario['id'])
+                            st.rerun()
+                with c2:
+                    if st.button("View Details", key=f"view_{scenario['id']}"):
+                        st.session_state['page'] = 'detail'
                         st.session_state['selected_scenario'] = scenario['id']
-                        join_scenario(scenario['id'])
                         st.rerun()
-                if c2.button("View Details", key=f"view_{scenario['id']}"):
-                    st.session_state['page'] = 'detail'
-                    st.session_state['selected_scenario'] = scenario['id']
-                    st.rerun()
-                if c3.button("Delete", key=f"delete_{scenario['id']}"):
-                    scenarios = [s for s in scenarios if s['id'] != scenario['id']]
-                    save_json(SCENARIOS_FILE, scenarios)
-                    st.success("Scenario deleted!")
-                    st.rerun()
+                if st.session_state['role'] == 'teacher':
+                    with c3:
+                        if st.button("Delete", key=f"delete_{scenario['id']}"):
+                            scenarios = [s for s in scenarios if s['id'] != scenario['id']]
+                            save_json(SCENARIOS_FILE, scenarios)
+                            st.success("Scenario deleted!")
+                            st.rerun()
 
 def scenario_detail_page():
     sid = st.session_state.get('selected_scenario')
