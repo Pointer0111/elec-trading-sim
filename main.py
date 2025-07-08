@@ -3,6 +3,7 @@ import os
 import json
 from datetime import datetime
 import pandas as pd
+import re
 
 # ------------------ 数据文件和工具 ------------------
 DATA_DIR = 'data'
@@ -99,15 +100,30 @@ def login_page():
                 else:
                     st.error(msg)
 
+def get_market_types():
+    types = []
+    try:
+        with open('电力市场模拟算法机制.md', 'r', encoding='utf-8') as f:
+            for line in f:
+                m = re.match(r"### \*\*场景 \d+：(.+?)（(.+?)）\*\*", line)
+                if m:
+                    types.append(f"{m.group(1)} ({m.group(2)})")
+    except Exception as e:
+        types = ["Single-price Clearing Market", "Pay-as-Bid", "Transmission Constraints", "CMSC", "Locational Pricing", "Fixed Costs", "Cost Recovery Guarantees", "Multi-Interval Optimization", "Planning Risk", "Day-Ahead Market + Two-Settlement"]
+    return types
+
 def scenarios_list_page():
     st.title("Experiment Scenarios")
     scenarios = load_json(SCENARIOS_FILE)
-    st.button("Refresh", on_click=lambda: st.rerun())
+    if st.button("Refresh"):
+        st.rerun()
     if st.session_state['role'] == 'teacher':
         with st.expander("Create New Scenario"):
             name = st.text_input("Scenario Name")
             desc = st.text_area("Description")
-            demand = st.number_input("Demand (MW)", min_value=1, value=5)
+            demand = st.number_input("Demand (MW)", min_value=1, value=5, step=1, format="%d")
+            market_types = get_market_types()
+            market_type = st.selectbox("Market Type", market_types)
             if st.button("Create Scenario"):
                 scenarios.append({
                     'id': int(datetime.now().timestamp()),
@@ -117,7 +133,7 @@ def scenarios_list_page():
                     'status': 'active',
                     'participants': 0,
                     'created_at': datetime.now().strftime('%Y-%m-%d'),
-                    'market_type': 'Single Price',
+                    'market_type': market_type,
                     'is_open': True
                 })
                 save_json(SCENARIOS_FILE, scenarios)
@@ -132,10 +148,11 @@ def scenarios_list_page():
                 st.markdown(f"### {scenario['name']}")
                 st.caption(scenario['description'])
                 st.write(f"**Demand:** {scenario['demand']} MW")
+                st.write(f"**Type:** {scenario.get('market_type', 'N/A')}")
                 st.write(f"**Status:** :{'green' if scenario['status']=='active' else 'gray'}[{scenario['status'].capitalize()}]")
                 st.write(f"**Participants:** {scenario.get('participants', 0)}")
                 st.write(f"**Created:** {scenario['created_at']}")
-                c1, c2 = st.columns(2)
+                c1, c2, c3 = st.columns(3)
                 if scenario['status'] == 'active':
                     if c1.button("Join Scenario", key=f"join_{scenario['id']}"):
                         st.session_state['page'] = 'bidding'
@@ -146,6 +163,11 @@ def scenarios_list_page():
                     st.session_state['page'] = 'detail'
                     st.session_state['selected_scenario'] = scenario['id']
                     st.rerun()
+                if c3.button("Delete", key=f"delete_{scenario['id']}"):
+                    scenarios = [s for s in scenarios if s['id'] != scenario['id']]
+                    save_json(SCENARIOS_FILE, scenarios)
+                    st.success("Scenario deleted!")
+                    st.rerun()
 
 def scenario_detail_page():
     sid = st.session_state.get('selected_scenario')
@@ -154,7 +176,8 @@ def scenario_detail_page():
     participants = load_json(PARTICIPANTS_FILE).get(str(sid), [])
     bids = load_json(BIDS_FILE).get(str(sid), [])
     is_participant = st.session_state['username'] in [p['username'] for p in participants]
-    st.button("← Back", on_click=lambda: set_page('scenarios'))
+    if st.button("← Back"):
+        set_page('scenarios')
     if not scenario:
         st.warning("No scenario selected or data not loaded.")
         return
@@ -168,9 +191,11 @@ def scenario_detail_page():
     st.write(f"**Participants:** {len(participants)}")
     st.write(f"**Experiment Type:** {'Open' if scenario.get('is_open') else 'Class Limited'}")
     if scenario['status'] == 'active' and not is_participant:
-        st.button("Join Scenario", on_click=lambda: join_scenario(sid))
+        if st.button("Join Scenario"):
+            join_scenario(sid)
     if scenario['status'] == 'active' and is_participant:
-        st.button("Submit Bids", on_click=lambda: set_page('bidding'))
+        if st.button("Submit Bids"):
+            set_page('bidding')
     if scenario['status'] == 'completed':
         st.button("View Results")
     st.markdown("#### Participants")
@@ -196,20 +221,22 @@ def bidding_page():
     scenarios = load_json(SCENARIOS_FILE)
     scenario = next((s for s in scenarios if s['id'] == sid), None)
     my_bids = [b for b in load_json(BIDS_FILE).get(str(sid), []) if b['username'] == st.session_state['username']]
-    st.button("← Back", on_click=lambda: set_page('scenarios'))
+    if st.button("← Back"):
+        set_page('scenarios')
     if not scenario:
         st.warning("Please select a scenario.")
         return
     st.header(f"Bidding for: {scenario['name']}")
     st.caption(scenario['description'])
     with st.form("bid_form"):
-        price = st.number_input("Bid Price ($/MWh)", min_value=0.0, value=0.0, step=0.01)
+        price = st.number_input("Bid Price ($/MWh)", min_value=0, value=0, step=1, format="%d")
         quantity = st.number_input(
             "Bid Quantity (MW)",
-            min_value=0.0,
-            max_value=float(scenario['demand']),
-            value=0.0,
-            step=0.01
+            min_value=0,
+            max_value=int(scenario['demand']),
+            value=0,
+            step=1,
+            format="%d"
         )
         bid_type = st.selectbox("Bid Type", ["supply", "demand"])
         submitted = st.form_submit_button("Submit Bid")
