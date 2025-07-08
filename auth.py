@@ -114,18 +114,14 @@ def init_default_users():
     if not users:
         # Create default teacher and student accounts
         default_users = {
-            'teacher1': {
+            'teacher': {
                 'password_hash': hash_password('teachpass'),
                 'role': 'teacher'
             },
-            'student1': {
+            'student': {
                 'password_hash': hash_password('studpass1'),
                 'role': 'student'
             },
-            'student2': {
-                'password_hash': hash_password('studpass2'),
-                'role': 'student'
-            }
         }
         save_users(default_users)
 
