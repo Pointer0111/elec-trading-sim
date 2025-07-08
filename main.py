@@ -253,17 +253,20 @@ def bidding_page():
         bid_type = st.selectbox("Bid Type", ["supply", "demand"])
         submitted = st.form_submit_button("Submit Bid")
         if submitted:
-            bids = load_json(BIDS_FILE)
-            bids.setdefault(str(sid), []).append({
-                'username': st.session_state['username'],
-                'price': price,
-                'quantity': quantity,
-                'bid_type': bid_type,
-                'created_at': datetime.now().strftime('%Y-%m-%d %H:%M')
-            })
-            save_json(BIDS_FILE, bids)
-            st.success(f"Bid submitted: ${price}/MWh, {quantity} MW, {bid_type}")
-            st.rerun()
+            if price == 0 or quantity == 0:
+                st.error("Price and Quantity must both be greater than 0!")
+            else:
+                bids = load_json(BIDS_FILE)
+                bids.setdefault(str(sid), []).append({
+                    'username': st.session_state['username'],
+                    'price': price,
+                    'quantity': quantity,
+                    'bid_type': bid_type,
+                    'created_at': datetime.now().strftime('%Y-%m-%d %H:%M')
+                })
+                save_json(BIDS_FILE, bids)
+                st.success(f"Bid submitted: ${price}/MWh, {quantity} MW, {bid_type}")
+                st.rerun()
     st.markdown("#### Scenario Details")
     st.write(f"**Demand:** {scenario['demand']} MW")
     st.write(f"**Status:** {scenario['status']}")
