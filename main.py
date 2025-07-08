@@ -101,15 +101,7 @@ def login_page():
                     st.error(msg)
 
 def get_market_types():
-    types = []
-    try:
-        with open('电力市场模拟算法机制.md', 'r', encoding='utf-8') as f:
-            for line in f:
-                m = re.match(r"### \*\*场景 \d+：(.+?)（(.+?)）\*\*", line)
-                if m:
-                    types.append(m.group(2))  # 只保留英文
-    except Exception as e:
-        types = ["Single-price Clearing Market", "Pay-as-Bid", "Transmission Constraints", "CMSC", "Locational Pricing", "Fixed Costs", "Cost Recovery Guarantees", "Multi-Interval Optimization", "Planning Risk", "Day-Ahead Market + Two-Settlement"]
+    types = ["Single-price Clearing Market", "Pay-as-Bid", "Transmission Constraints", "CMSC", "Locational Pricing", "Fixed Costs", "Cost Recovery Guarantees", "Multi-Interval Optimization", "Planning Risk", "Day-Ahead Market + Two-Settlement"]
     return types
 
 def scenarios_list_page():
