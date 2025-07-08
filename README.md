@@ -21,23 +21,14 @@ pip install -r requirements.txt
 streamlit run main.py
 ```
 
-### 3. Login Accounts
-- Teacher:  
+### 3. Login
+- **Teacher:**  
   Username: `teacher1`  
   Password: `teachpass`  
-  Role: `teacher`
-- Student:  
-  Username: `student1`  
-  Password: `studpass1`  
-  Role: `student`
-  
-  Username: `student2`  
-  Password: `studpass2`  
-  Role: `student`
+  Only one teacher account is supported.
+- **Student:**  
+  No registration or password required.  
+  Simply enter your name and click 'Enter as Student' to join the platform.
 
 ## Adding More Scenarios
-- Add a new file in `scenes/` (e.g., `scene2.py`) and register it in `scenes/__init__.py`.
-
-## Notes
-- All data is stored in memory for demo purposes. For production, replace with a persistent database.
-- The UI is in English for international users. 
+- Add a new file in `

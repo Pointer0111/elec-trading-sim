@@ -64,41 +64,32 @@ def verify_user(username, password):
 
 # ------------------ 页面函数 ------------------
 def login_page():
-    st.title("Login / Register")
-    tab1, tab2 = st.tabs(["Login", "Register"])
+    st.title("Login")
+    tab1, tab2 = st.tabs(["Teacher Login", "Student Enter"])
     with tab1:
-        username = st.text_input("Username", key="login_user")
+        username = st.text_input("Teacher Username", key="login_user")
         password = st.text_input("Password", type="password", key="login_pw")
-        if st.button("Login"):
-            ok, role = verify_user(username, password)
-            if ok:
+        if st.button("Login as Teacher"):
+            # 只允许唯一教师账号
+            if username == 'teacher1' and password == 'teachpass':
                 st.session_state['logged_in'] = True
                 st.session_state['username'] = username
-                st.session_state['role'] = role
+                st.session_state['role'] = 'teacher'
                 st.success("Login successful!")
                 st.rerun()
             else:
-                st.error("Invalid username or password.")
+                st.error("Invalid teacher username or password.")
     with tab2:
-        reg_user = st.text_input("Username", key="reg_user")
-        reg_pw = st.text_input("Password", type="password", key="reg_pw")
-        reg_pw2 = st.text_input("Confirm Password", type="password", key="reg_pw2")
-        reg_role = st.selectbox("Role", ["student", "teacher"], key="reg_role")
-        if st.button("Register"):
-            if not reg_user or not reg_pw or not reg_pw2:
-                st.error("Please fill all fields.")
-            elif reg_pw != reg_pw2:
-                st.error("Passwords do not match.")
+        student_name = st.text_input("Your Name", key="student_name")
+        if st.button("Enter as Student"):
+            if not student_name.strip():
+                st.error("Please enter your name.")
             else:
-                ok, msg = register_user(reg_user, reg_pw, reg_role)
-                if ok:
-                    st.success(msg)
-                    st.session_state['logged_in'] = True
-                    st.session_state['username'] = reg_user
-                    st.session_state['role'] = reg_role
-                    st.rerun()
-                else:
-                    st.error(msg)
+                st.session_state['logged_in'] = True
+                st.session_state['username'] = student_name.strip()
+                st.session_state['role'] = 'student'
+                st.success(f"Welcome, {student_name.strip()}!")
+                st.rerun()
 
 def get_market_types():
     types = ["Single-price Clearing Market", "Pay-as-Bid", "Transmission Constraints", "CMSC", "Locational Pricing", "Fixed Costs", "Cost Recovery Guarantees", "Multi-Interval Optimization", "Planning Risk", "Day-Ahead Market + Two-Settlement"]
