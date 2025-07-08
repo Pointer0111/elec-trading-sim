@@ -203,8 +203,14 @@ def bidding_page():
     st.header(f"Bidding for: {scenario['name']}")
     st.caption(scenario['description'])
     with st.form("bid_form"):
-        price = st.number_input("Bid Price ($/MWh)", min_value=0.0, step=0.01)
-        quantity = st.number_input("Bid Quantity (MW)", min_value=0.0, max_value=scenario['demand'])
+        price = st.number_input("Bid Price ($/MWh)", min_value=0.0, value=0.0, step=0.01)
+        quantity = st.number_input(
+            "Bid Quantity (MW)",
+            min_value=0.0,
+            max_value=float(scenario['demand']),
+            value=0.0,
+            step=0.01
+        )
         bid_type = st.selectbox("Bid Type", ["supply", "demand"])
         submitted = st.form_submit_button("Submit Bid")
         if submitted:
