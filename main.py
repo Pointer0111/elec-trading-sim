@@ -1,6 +1,15 @@
 import streamlit as st
 import pandas as pd
-from scenes import get_scene_module
+try:
+    from scenes import get_scene_module, SCENE_TITLES, get_default_params
+    SCENES_AVAILABLE = True
+except ImportError:
+    SCENES_AVAILABLE = False
+    SCENE_TITLES = {}
+    def get_scene_module(scene_id):
+        return None
+    def get_default_params(scene_id):
+        return {}
 from auth import login, get_user_role, logout
 from db import (
     create_session, join_session, get_session_params, 
@@ -37,28 +46,33 @@ if st.session_state['role'] == 'teacher':
     st.write("## Existing Sessions")
     st.dataframe(pd.DataFrame(all_sessions))
     st.write("## Create New Session")
-    from scenes import SCENE_TITLES, get_default_params
-    scene_id = st.selectbox("Select Scenario", list(SCENE_TITLES.keys()), format_func=lambda x: f"{x}: {SCENE_TITLES[x]}")
-    params = get_default_params(scene_id)
-    with st.form("session_params_form"):
-        param_inputs = {}
-        for k, v in params.items():
-            param_inputs[k] = st.number_input(k, value=v)
-        submitted = st.form_submit_button("Create Session")
-        if submitted:
-            session_code = create_session(scene_id, param_inputs)
-            st.session_state['session_code'] = session_code
-            st.success(f"Session created! Session code: {session_code}")
-    # Show session management and results if session selected
-    if st.session_state['session_code']:
-        st.write(f"### Session Code: {st.session_state['session_code']}")
-        session_params = get_session_params(st.session_state['session_code'])
-        st.write("#### Session Parameters", session_params)
-        bids = get_bids(st.session_state['session_code'])
-        st.write("#### Current Bids", pd.DataFrame(bids))
-        # Run scenario logic and show results
-        scene_mod = get_scene_module(session_params['scene_id'])
-        scene_mod.teacher_view(session_params, bids)
+    if SCENES_AVAILABLE:
+        scene_id = st.selectbox("Select Scenario", list(SCENE_TITLES.keys()), format_func=lambda x: f"{x}: {SCENE_TITLES[x]}")
+        params = get_default_params(scene_id)
+        with st.form("session_params_form"):
+            param_inputs = {}
+            for k, v in params.items():
+                param_inputs[k] = st.number_input(k, value=v)
+            submitted = st.form_submit_button("Create Session")
+            if submitted:
+                session_code = create_session(scene_id, param_inputs)
+                st.session_state['session_code'] = session_code
+                st.success(f"Session created! Session code: {session_code}")
+        # Show session management and results if session selected
+        if st.session_state['session_code']:
+            st.write(f"### Session Code: {st.session_state['session_code']}")
+            session_params = get_session_params(st.session_state['session_code'])
+            st.write("#### Session Parameters", session_params)
+            bids = get_bids(st.session_state['session_code'])
+            st.write("#### Current Bids", pd.DataFrame(bids))
+            # Run scenario logic and show results
+            scene_mod = get_scene_module(session_params['scene_id'])
+            if scene_mod:
+                scene_mod.teacher_view(session_params, bids)
+            else:
+                st.error("Scenario module not available")
+    else:
+        st.error("Scenes module not available")
 
 # Student view
 elif st.session_state['role'] == 'student':
@@ -90,4 +104,7 @@ elif st.session_state['role'] == 'student':
         session_params = get_session_params(st.session_state['session_code'])
         bids = get_bids(st.session_state['session_code'])
         scene_mod = get_scene_module(session_params['scene_id'])
-        scene_mod.student_view(session_params, bids, user_info) 
+        if scene_mod:
+            scene_mod.student_view(session_params, bids, user_info)
+        else:
+            st.error("Scenario module not available") 
