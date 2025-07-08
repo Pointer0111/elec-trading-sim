@@ -129,6 +129,13 @@ if st.session_state['role'] == 'teacher':
 # Student view
 elif st.session_state['role'] == 'student':
     st.header("Join Classroom Session")
+    
+    # Add button to return to session list
+    if st.session_state['session_code']:
+        if st.button("← Back to Session List"):
+            st.session_state['session_code'] = None
+            st.rerun()
+    
     if not st.session_state['session_code']:
         all_sessions = get_all_sessions()
         if not all_sessions:
@@ -152,11 +159,27 @@ elif st.session_state['role'] == 'student':
             st.session_state['session_code'] = None
             st.rerun()
         
-        st.write(f"### Your Role: {user_info}")
+        # Display user info in a friendly way
+        st.write("### Your Role Information")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Your Marginal Cost (MC)", f"${user_info['MC']}")
+        with col2:
+            if user_info.get('bid_submitted', False):
+                st.metric("Your Bid Price", f"${user_info['price']}")
+            else:
+                st.metric("Your Bid Price", "Not submitted")
+        with col3:
+            if user_info.get('bid_submitted', False):
+                st.metric("Status", "✅ Bid Submitted")
+            else:
+                st.metric("Status", "⏳ Pending")
+        
         # Show bid submission form
         if not user_info.get('bid_submitted', False):
+            st.write("### Submit Your Bid")
             min_price = user_info['MC']
-            price = st.number_input("Enter your offer price (must be >= MC)", min_value=min_price)
+            price = st.number_input("Enter your offer price (must be >= MC)", min_value=min_price, value=min_price)
             if st.button("Submit Bid"):
                 if submit_bid(st.session_state['session_code'], st.session_state['username'], price):
                     st.success("Bid submitted! Waiting for results...")
@@ -164,7 +187,8 @@ elif st.session_state['role'] == 'student':
                 else:
                     st.error("Failed to submit bid. Session may have been deleted.")
         else:
-            st.info("You have submitted your bid. Please wait for the teacher to publish results.")
+            st.info("✅ You have submitted your bid. Please wait for the teacher to publish results.")
+        
         # Show current market status
         session_params = get_session_params(st.session_state['session_code'])
         if session_params is None:
