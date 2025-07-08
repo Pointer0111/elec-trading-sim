@@ -23,6 +23,11 @@ def save_db(data):
     with open(DB_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
+def session_exists(session_code):
+    """Check if a session exists"""
+    db = load_db()
+    return session_code in db['sessions']
+
 def create_session(scene_id, params):
     db = load_db()
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
@@ -55,23 +60,33 @@ def join_session(session_code, username):
 
 def get_session_params(session_code):
     db = load_db()
+    if session_code not in db['sessions']:
+        return None
     session_data = db['sessions'][session_code]
     return session_data['params'] | {'scene_id': session_data['scene_id']}
 
 def get_bids(session_code):
     db = load_db()
+    if session_code not in db['sessions']:
+        return []
     return [dict(username=k, **v) for k, v in db['sessions'][session_code]['bids'].items()]
 
 def submit_bid(session_code, username, price):
     db = load_db()
+    if session_code not in db['sessions']:
+        return False
     bids = db['sessions'][session_code]['bids']
     if username in bids:
         bids[username]['price'] = price
         bids[username]['bid_submitted'] = True
         save_db(db)
+        return True
+    return False
 
 def get_user_info(session_code, username):
     db = load_db()
+    if session_code not in db['sessions']:
+        return {}
     return db['sessions'][session_code]['bids'].get(username, {})
 
 def delete_session(session_code):

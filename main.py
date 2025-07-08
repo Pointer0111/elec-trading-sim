@@ -13,7 +13,7 @@ except ImportError:
 from auth import login, get_user_role, logout
 from db import (
     create_session, join_session, get_session_params, 
-    submit_bid, get_bids, get_user_info, get_all_sessions, delete_session
+    submit_bid, get_bids, get_user_info, get_all_sessions, delete_session, session_exists
 )
 
 st.set_page_config(page_title="Electricity Market Simulation", layout="wide")
@@ -37,6 +37,12 @@ st.sidebar.title("Electricity Market Simulation Platform")
 st.sidebar.write(f"Logged in as: {st.session_state['username']} ({st.session_state['role']})")
 if st.sidebar.button("Logout"):
     logout()
+    st.rerun()
+
+# Check if current session still exists
+if st.session_state['session_code'] and not session_exists(st.session_state['session_code']):
+    st.error(f"Session {st.session_state['session_code']} no longer exists. It may have been deleted or expired.")
+    st.session_state['session_code'] = None
     st.rerun()
 
 # Teacher/Admin view
@@ -97,6 +103,11 @@ if st.session_state['role'] == 'teacher':
     if st.session_state['session_code']:
         st.write(f"### Session Details: {st.session_state['session_code']}")
         session_params = get_session_params(st.session_state['session_code'])
+        if session_params is None:
+            st.error("Session not found!")
+            st.session_state['session_code'] = None
+            st.rerun()
+        
         st.write("#### Session Parameters")
         st.json(session_params)
         
@@ -136,19 +147,31 @@ elif st.session_state['role'] == 'student':
                     st.warning("You have already joined this session.")
     if st.session_state['session_code']:
         user_info = get_user_info(st.session_state['session_code'], st.session_state['username'])
+        if not user_info:
+            st.error("Session not found or you are not a member!")
+            st.session_state['session_code'] = None
+            st.rerun()
+        
         st.write(f"### Your Role: {user_info}")
         # Show bid submission form
         if not user_info.get('bid_submitted', False):
             min_price = user_info['MC']
             price = st.number_input("Enter your offer price (must be >= MC)", min_value=min_price)
             if st.button("Submit Bid"):
-                submit_bid(st.session_state['session_code'], st.session_state['username'], price)
-                st.success("Bid submitted! Waiting for results...")
-                st.rerun()
+                if submit_bid(st.session_state['session_code'], st.session_state['username'], price):
+                    st.success("Bid submitted! Waiting for results...")
+                    st.rerun()
+                else:
+                    st.error("Failed to submit bid. Session may have been deleted.")
         else:
             st.info("You have submitted your bid. Please wait for the teacher to publish results.")
         # Show current market status
         session_params = get_session_params(st.session_state['session_code'])
+        if session_params is None:
+            st.error("Session not found!")
+            st.session_state['session_code'] = None
+            st.rerun()
+        
         bids = get_bids(st.session_state['session_code'])
         scene_mod = get_scene_module(session_params['scene_id'])
         if scene_mod:
